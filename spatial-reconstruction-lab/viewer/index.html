@@ -3,40 +3,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Spatial Reconstruction Lab</title>
+  <title>World-indepth viewer</title>
   <style>
-    html, body { height: 100%; margin: 0; background: #111; color: #eee; font: 14px sans-serif; }
-    body { display: grid; grid-template-columns: 280px 1fr; }
-    aside { padding: 16px; background: #1d1d1d; overflow: auto; }
-    main { position: relative; min-width: 0; }
-    canvas { width: 100%; height: 100%; display: block; }
-    label { display: block; margin: 16px 0 6px; }
+    html, body { height: 100%; margin: 0; background: #101318; color: #eef2f6; font: 14px system-ui, sans-serif; }
+    body { display: grid; grid-template-columns: 300px 1fr; }
+    aside { padding: 18px; background: #191e27; overflow: auto; }
+    main { min-width: 0; position: relative; }
+    canvas { display: block; width: 100%; height: 100%; }
+    label { display: block; margin-top: 16px; }
     input[type=range] { width: 100%; }
-    img { width: 100%; margin-top: 12px; }
-    button { padding: 8px 12px; }
-    #status { color: #aaa; line-height: 1.4; }
+    button { margin-top: 10px; padding: 8px 12px; }
+    #status { color: #b7c1cc; line-height: 1.45; }
+    .notice { border-left: 3px solid #e4a853; padding-left: 10px; }
+    img { display: block; max-width: 100%; margin-top: 10px; }
   </style>
 </head>
 <body>
   <aside>
-    <h2>2.5D reconstruction</h2>
-    <p id="status">Loading point cloud...</p>
+    <h1>Evidence viewer</h1>
+    <p id="status">No public demonstration dataset is bundled.</p>
+    <p class="notice">Load a local WIPCLD01 point cloud. Local files are not uploaded.</p>
+    <label for="cloud">Point cloud (.wipcld)</label>
+    <input id="cloud" type="file" accept=".wipcld,application/octet-stream">
     <label for="point-size">Point size</label>
     <input id="point-size" type="range" min="0.5" max="8" step="0.1" value="2">
     <button id="reset">Reset camera</button>
-    <h3>Source image</h3>
-    <img src="../assets/input/world-labs-workshop.webp" alt="World Labs workshop source image">
-    <h3>Estimated depth</h3>
-    <img src="../output/depth_visualization.png" alt="Estimated relative depth visualization">
-    <p>Drag to orbit. Scroll to zoom. The cloud is single-view pseudo-depth, not a complete world.</p>
+    <label for="source">Optional source image</label>
+    <input id="source" type="file" accept="image/*">
+    <img id="source-preview" alt="Optional local source image preview" hidden>
+    <p>Drag to orbit, scroll to zoom, and right-drag to translate. This viewer
+    displays evidence supplied by the local operator; it does not infer
+    confidence or multi-view support from geometry alone.</p>
   </aside>
   <main><canvas id="viewport"></canvas></main>
   <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
-      }
-    }
+    {"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
   </script>
   <script type="module">
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
@@ -45,38 +46,65 @@
     const canvas = document.querySelector("#viewport");
     const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111111);
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 100);
+    scene.background = new THREE.Color(0x101318);
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 1000);
     const controls = new OrbitControls(camera, renderer.domElement);
     const status = document.querySelector("#status");
-    const response = await fetch("../output/pointcloud.json");
-    const data = await response.json();
-    const positions = new Float32Array(data.points.length * 3);
-    const colors = new Float32Array(data.points.length * 3);
-    data.points.forEach((point, index) => {
-      positions.set(point.xyz, index * 3);
-      colors.set(point.color.map(value => value / 255), index * 3);
-    });
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    const material = new THREE.PointsMaterial({size: 0.02, vertexColors: true, sizeAttenuation: true});
-    const cloud = new THREE.Points(geometry, material);
-    scene.add(cloud);
-    geometry.computeBoundingSphere();
-    const radius = geometry.boundingSphere.radius || 1;
-    camera.position.set(0, 0, radius * 2.5);
-    controls.target.copy(geometry.boundingSphere.center);
-    controls.update();
-    status.textContent = `${data.points.length.toLocaleString()} points; relative depth; arbitrary scale`;
-    document.querySelector("#point-size").addEventListener("input", event => {
-      material.size = Number(event.target.value) / 100;
-    });
-    document.querySelector("#reset").addEventListener("click", () => {
+    let cloud;
+    let radius = 1;
+
+    async function loadCloud(file) {
+      if (cloud) {
+        scene.remove(cloud);
+        cloud.geometry.dispose();
+        cloud.material.dispose();
+      }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const view = new DataView(bytes.buffer);
+      if (bytes.length < 12 || new TextDecoder().decode(bytes.slice(0, 8)) !== "WIPCLD01") {
+        throw new Error("unsupported point-cloud format; expected WIPCLD01");
+      }
+      const count = view.getUint32(8, true);
+      const stride = 15;
+      if (bytes.length !== 12 + count * stride) throw new Error("truncated point-cloud payload");
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      let offset = 12;
+      for (let i = 0; i < count; i++, offset += stride) {
+        positions.set([view.getFloat32(offset, true), view.getFloat32(offset + 4, true), view.getFloat32(offset + 8, true)], i * 3);
+        colors.set([bytes[offset + 12] / 255, bytes[offset + 13] / 255, bytes[offset + 14] / 255], i * 3);
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const material = new THREE.PointsMaterial({size: 0.02, vertexColors: true, sizeAttenuation: true});
+      cloud = new THREE.Points(geometry, material);
+      scene.add(cloud);
+      geometry.computeBoundingSphere();
+      radius = geometry.boundingSphere?.radius || 1;
       camera.position.set(0, 0, radius * 2.5);
       controls.target.copy(geometry.boundingSphere.center);
       controls.update();
-    });
+      status.textContent = `${count.toLocaleString()} points; WIPCLD01 float32/RGB8; local evidence`;
+      document.querySelector("#point-size").oninput = event => { material.size = Number(event.target.value) / 100; };
+    }
+
+    document.querySelector("#cloud").onchange = async event => {
+      try { await loadCloud(event.target.files[0]); }
+      catch (error) { status.textContent = `Load failed: ${error.message}`; }
+    };
+    document.querySelector("#source").onchange = event => {
+      const file = event.target.files[0];
+      if (file) {
+        const preview = document.querySelector("#source-preview");
+        preview.src = URL.createObjectURL(file);
+        preview.hidden = false;
+      }
+    };
+    document.querySelector("#reset").onclick = () => {
+      camera.position.set(0, 0, radius * 2.5);
+      controls.update();
+    };
     function resize() {
       const {clientWidth, clientHeight} = canvas;
       renderer.setSize(clientWidth, clientHeight, false);

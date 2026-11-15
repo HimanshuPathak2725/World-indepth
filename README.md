@@ -1,67 +1,105 @@
 # World-indepth
 
-Evidence-led research into World Labs public workflows and an independent
-single-image RGB-D reconstruction prototype.
+**From Pixels to Verifiable 3D Worlds.**
 
-## What is included
+World-indepth is an independent, evidence-led spatial reconstruction lab. Its
+first public research milestone is the **View Budget Challenge**:
 
-- `spatial-reconstruction-lab/`: CPU depth inference, RGB-D unprojection,
-  generated artifacts, focused tests, and a browser viewer.
-- `research/`: architecture, evidence ledger, experiment log, handoff, and
-  unresolved questions.
-- `research/evidence/rea/`: retained public World Labs browser observations.
-- `research/evidence/spatial-reconstruction-viewer.png`: local viewer validation
-  screenshot.
+> How does reconstruction quality and evidence coverage change when a static
+> scene is observed in 1, 2, 3, 5, or 8 photographs?
 
-The REA source repository itself is intentionally not copied here. It was used
-as the local observation instrument.
+This is not a World Labs clone or affiliation claim. The project keeps measured
+outputs, model predictions, visualization assumptions, and unknowns separate.
 
-## Reproduce the reconstruction
+## Repository map
 
-The checked-in outputs are the results of the completed run. To reproduce
-inference without modifying REA dependencies:
+- `index.html`: static research landing page.
+- `spatial-reconstruction-lab/`: baseline geometry, compact point-cloud format,
+  dataset validator, optional MapAnything adapter, tests, and local viewer.
+- `docs/multiview-capture.md`: private scene capture and manifest contract.
+- `research/`: prior public World Labs research and evidence ledger.
+- `research/provenance/`: provenance for the previously inspected, but
+  unverified-for-redistribution, Atlas documentation image.
+- `research/artifact-manifest.json`: public/local artifact policy and compact
+  format size formula.
+- `.github/workflows/pages.yml`: GitHub Pages deployment workflow.
+
+## Public-data safety
+
+No photograph or derived reconstruction is bundled in the public demo. The
+previous Atlas documentation image remains documented by URL, SHA-256, and
+unknown licence status, but its image and derived outputs were removed from the
+deployment payload. Private captures, checkpoints, caches, and generated
+outputs are ignored by default.
+
+The viewer accepts a local compact `WIPCLD01` file. Local files stay in the
+browser and are not uploaded.
+
+## Reproduce the single-view baseline
+
+Use an explicitly licensed local RGB image:
 
 ```sh
 cd spatial-reconstruction-lab
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 .venv/bin/python run_depth.py \
-  --image assets/input/world-labs-workshop.webp \
-  --output output
+.venv/bin/python run_depth.py --image /path/to/licensed-image.webp --output output
+.venv/bin/python -m unittest discover -v
 ```
 
-The model is `depth-anything/Depth-Anything-V2-Small-hf`. Its output is
-relative/inverse-like depth. The script explicitly normalizes it into arbitrary
-pseudo-depth units and does not claim metres or metric accuracy.
+Depth Anything V2 Small produces relative/inverse-like depth. The baseline
+normalizes it to arbitrary pseudo-depth units and assumes an 80-degree
+horizontal field of view. It is a single-view 2.5D point cloud, not metric
+reconstruction or a complete world. Reprojection round-trip accuracy only
+validates camera mathematics.
 
-Run the focused geometry tests:
+Open `spatial-reconstruction-lab/viewer/` through a local HTTP server and load
+`output/pointcloud.wipcld`. The format is documented in
+`spatial-reconstruction-lab/pointcloud.py`: little-endian `WIPCLD01`, uint32
+point count, float32 XYZ, and uint8 RGB. It avoids the former 83 MB JSON
+delivery.
+
+## View Budget Challenge
+
+Create a private manifest following
+[`docs/multiview-capture.md`](docs/multiview-capture.md), then validate it:
 
 ```sh
-.venv/bin/python -m unittest -v test_pointcloud.py
+cd spatial-reconstruction-lab
+python validate_dataset.py private/scenes/<scene-id>/manifest.json
 ```
 
-Serve and open the viewer:
+The deterministic input budgets are 1, 2, 3, 5, and 8 views; held-out images
+are rejected from model input. No multi-view scene or novel-view metrics are
+claimed until a real capture is supplied and held-out cameras are independently
+registered.
+
+## Optional MapAnything adapter
+
+The adapter targets `facebook/map-anything-apache`, model revision
+`00f9c245bbcb60522d1ed7f9e9d88462c6e3f38a`, Apache-2.0 metadata, and the
+upstream MapAnything API. It is intentionally isolated from the baseline:
 
 ```sh
-python3 -m http.server 8765
-# open http://127.0.0.1:8765/viewer/
+python run_mapanything.py private/scenes/<scene-id>/manifest.json \
+  --budget 2 --output private/scenes/<scene-id>/outputs/budget-2 --device cuda
 ```
 
-The viewer uses Three.js from jsDelivr and therefore needs network access to
-load its browser modules. It supports orbiting, zooming, translation, reset,
-point-size adjustment, and comparison with the source image and depth map.
+Provision the upstream MapAnything Python 3.12 environment separately with
+`pip install -e .` from its repository; do not install it into the baseline
+environment. The adapter's checkpoint and dependency downloads are intentionally
+not part of this repository.
 
-## Input provenance and limitations
+This Codespace has 2 CPUs, 7.8 GiB RAM, and no GPU. The checkpoint was not
+downloaded and real MapAnything inference was not run here. The adapter has
+mocked-output validation tests only.
 
-The input is the public Atlas documentation image recorded in
-`assets/input/source_metadata.json`. Its page describes a blacksmith workshop,
-but does not establish whether the visual is a photograph, AI-generated image,
-or 3D render. Licence or reuse permission was not verified; the local copy is
-retained for research and is not presented as original work.
+## Checks
 
-This is a single-view 2.5D reconstruction. It cannot recover unseen surfaces,
-disocclusions, or reliable metric scale. Reprojection error validates the
-internal camera mathematics, not the quality of the estimated depth.
+```sh
+cd spatial-reconstruction-lab
+python -m unittest discover -v
+```
 
-No authenticated Viewfinder workflow, upload, generation, export, or paid API
-request was performed.
+PSNR, SSIM, and LPIPS are deliberately not reported until held-out camera
+registration and valid comparable rendering exist.

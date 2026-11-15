@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>World-indepth — From Pixels to Verifiable 3D Worlds</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0e1117; --card: #171d27; --accent: #73d5c3; }
+    * { box-sizing: border-box; } body { margin: 0; background: var(--bg); color: #edf2f7; font: 16px/1.6 system-ui, sans-serif; }
+    header, main, footer { max-width: 1100px; margin: auto; padding: 28px 22px; }
+    header { min-height: 72vh; display: grid; align-content: center; }
+    h1 { font-size: clamp(2.8rem, 8vw, 6rem); line-height: .98; max-width: 800px; margin: 0; }
+    h2 { color: var(--accent); margin-top: 2.5rem; } .lede { font-size: 1.35rem; max-width: 720px; color: #bdc8d3; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+    .card { background: var(--card); padding: 20px; border-radius: 12px; } a { color: var(--accent); }
+    .button { display: inline-block; padding: 10px 15px; border: 1px solid var(--accent); border-radius: 6px; margin: 8px 8px 0 0; text-decoration: none; }
+    footer { border-top: 1px solid #29313d; color: #98a6b5; }
+  </style>
+</head>
+<body>
+  <header>
+    <p>WORLD-INDEPTH / OPEN RESEARCH LAB</p>
+    <h1>From Pixels to Verifiable 3D Worlds.</h1>
+    <p class="lede">An independent, evidence-led study of sparse-view reconstruction:
+    what geometry is observed, what is predicted, and how additional photographs
+    change the result.</p>
+    <div><a class="button" href="spatial-reconstruction-lab/viewer/">Open evidence viewer</a>
+    <a class="button" href="https://github.com/HimanshuPathak2725/World-indepth">Source on GitHub</a></div>
+  </header>
+  <main>
+    <section>
+      <h2>The research question</h2>
+      <p>How many photographs does it take to reconstruct a navigable scene—and
+      how much better does each additional view make it? The View Budget Challenge
+      will compare deterministic 1, 2, 3, 5, and 8-view inputs while reserving
+      held-out images for evaluation.</p>
+    </section>
+    <section class="grid">
+      <article class="card"><h2>Baseline</h2><p>Depth Anything V2 Small produces relative, inverse-like depth from one image. We unproject it into an RGB point cloud using explicit assumed intrinsics.</p></article>
+      <article class="card"><h2>Evidence</h2><p>Confidence, camera poses, masks, and cross-view support are shown only when supplied by a validated model output. Unknown remains unknown.</p></article>
+      <article class="card"><h2>Next engine</h2><p>MapAnything Apache-2.0 is an optional adapter. This repository does not claim that GPU inference or a real multi-view scene has run here.</p></article>
+    </section>
+    <section><h2>Current status</h2><p>No public demonstration photograph is bundled until redistribution rights are verified. Load your own local WIPCLD01 output in the viewer; files remain in your browser.</p></section>
+    <section><h2>Reproduce</h2><p>See <a href="README.md">README</a>, <a href="docs/multiview-capture.md">the capture contract</a>, and <a href="research/EXPERIMENTS.md">experiment records</a>. Metrics distinguish system measurements, consistency, and novel-view evaluation.</p></section>
+  </main>
+  <footer>Independent research. Not a World Labs clone or an affiliation claim.</footer>
+</body>
+</html>

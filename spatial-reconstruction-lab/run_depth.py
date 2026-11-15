@@ -14,7 +14,7 @@ import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
-from pointcloud import Intrinsics, Pose, reproject, unproject_rgbd, write_ply
+from pointcloud import Intrinsics, Pose, reproject, unproject_rgbd, write_compact, write_ply
 
 
 MODEL_ID = "depth-anything/Depth-Anything-V2-Small-hf"
@@ -67,6 +67,9 @@ def main() -> None:
     if not points or any(not all(math.isfinite(value) for value in xyz) for _, _, xyz, _ in points):
         raise RuntimeError("point cloud contains no valid finite points")
     point_count = write_ply(str(args.output / "pointcloud.ply"), points)
+    compact_point_count = write_compact(str(args.output / "pointcloud.wipcld"), points)
+    if compact_point_count != point_count:
+        raise RuntimeError("compact and PLY point counts differ")
     (args.output / "pointcloud.json").write_text(json.dumps({
         "points": [{"xyz": list(xyz), "color": list(color)} for _, _, xyz, color in points]
     }) + "\n", encoding="utf-8")
@@ -102,6 +105,8 @@ def main() -> None:
         "invalid_pixel_count": int((~finite).sum()),
         "valid_pixel_count": int(finite.sum()),
         "point_count": point_count,
+        "compact_format": "WIPCLD01: little-endian uint32 count; float32 XYZ; uint8 RGB",
+        "compact_artifact": "pointcloud.wipcld",
         "reprojection_max_pixel_error": reprojection_error,
         "depth_semantics": "relative/inverse-like model output, explicitly normalized and inverted; not metric",
         "normalization_policy": "finite raw output min-max to [0,1], then pseudo-depth = 1 + (1 - normalized) * 4",

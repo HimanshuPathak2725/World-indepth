@@ -1,7 +1,16 @@
 import math
 import unittest
 
-from pointcloud import Intrinsics, Pose, reproject, unproject, unproject_rgbd, write_ply
+from pointcloud import (
+    Intrinsics,
+    Pose,
+    read_compact,
+    reproject,
+    unproject,
+    unproject_rgbd,
+    write_compact,
+    write_ply,
+)
 
 
 IDENTITY = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
@@ -56,3 +65,25 @@ class PointCloudTests(unittest.TestCase):
             self.assertEqual(count, 1)
             self.assertIn("element vertex 1", text)
             self.assertTrue(text.endswith("1 2 3 4 5 6\n"))
+
+    def test_compact_output_round_trips_points_and_colors(self):
+        import tempfile
+        from pathlib import Path
+
+        points = [(0, 0, (1.25, -2.5, 3.75), (4, 5, 6))]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "points.wipcld"
+            self.assertEqual(write_compact(str(path), points), 1)
+            loaded = read_compact(str(path))
+            self.assertEqual(loaded, [((1.25, -2.5, 3.75), (4, 5, 6))])
+            self.assertEqual(path.stat().st_size, 8 + 4 + 15)
+
+    def test_compact_reader_rejects_truncated_payload(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bad.wipcld"
+            path.write_bytes(b"WIPCLD01" + (2).to_bytes(4, "little") + b"\0" * 15)
+            with self.assertRaises(ValueError):
+                read_compact(str(path))

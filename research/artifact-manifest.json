@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "public_demo": {
+    "bundled": false,
+    "reason": "No image-derived demo asset has verified redistribution permission."
+  },
+  "point_cloud_format": {
+    "name": "WIPCLD01",
+    "header_bytes": 12,
+    "record_bytes": 15,
+    "record": "float32 little-endian x,y,z followed by uint8 red,green,blue",
+    "size_formula": "12 + (15 * point_count)",
+    "viewer": "spatial-reconstruction-lab/viewer/index.html",
+    "individual_artifact_limit_bytes": 52428800
+  },
+  "local_only_outputs": [
+    "depth.npy",
+    "depth_visualization.png",
+    "pointcloud.wipcld",
+    "pointcloud.ply",
+    "pointcloud.json",
+    "predictions.npz",
+    "metadata.json"
+  ],
+  "previous_removed_artifacts": {
+    "pointcloud.json": 87030075,
+    "pointcloud.ply": 37834686,
+    "depth.npy": 3686528
+  }
+}

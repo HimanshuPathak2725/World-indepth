@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import struct
 from typing import Iterable
 
 RGB = tuple[int, int, int]
 Point = tuple[int, int, tuple[float, float, float], RGB]
+COMPACT_MAGIC = b"WIPCLD01"
+COMPACT_HEADER = struct.Struct("<8sI")
+COMPACT_POINT = struct.Struct("<fffBBB")
 
 
 @dataclass(frozen=True)
@@ -132,3 +136,38 @@ def write_ply(path: str, points: Iterable[Point]) -> int:
         for _, _, (x, y, z), (red, green, blue) in rows:
             output.write(f"{x:.8g} {y:.8g} {z:.8g} {red} {green} {blue}\n")
     return len(rows)
+
+
+def write_compact(path: str, points: Iterable[Point]) -> int:
+    """Write the documented WIPCLD01 little-endian float32/RGB8 format."""
+
+    rows = list(points)
+    with open(path, "wb") as output:
+        output.write(COMPACT_HEADER.pack(COMPACT_MAGIC, len(rows)))
+        for _, _, (x, y, z), (red, green, blue) in rows:
+            if not all(math.isfinite(value) for value in (x, y, z)):
+                raise ValueError("compact point cloud cannot contain non-finite coordinates")
+            output.write(COMPACT_POINT.pack(x, y, z, red, green, blue))
+    return len(rows)
+
+
+def read_compact(path: str) -> list[tuple[tuple[float, float, float], RGB]]:
+    """Read WIPCLD01 and reject truncation, trailing bytes, or invalid points."""
+
+    with open(path, "rb") as source:
+        header = source.read(COMPACT_HEADER.size)
+        if len(header) != COMPACT_HEADER.size:
+            raise ValueError("compact point cloud header is truncated")
+        magic, count = COMPACT_HEADER.unpack(header)
+        if magic != COMPACT_MAGIC:
+            raise ValueError("unsupported compact point cloud magic")
+        payload = source.read()
+    if len(payload) != count * COMPACT_POINT.size:
+        raise ValueError("compact point cloud payload is truncated or has trailing bytes")
+    result = []
+    for offset in range(0, len(payload), COMPACT_POINT.size):
+        x, y, z, red, green, blue = COMPACT_POINT.unpack_from(payload, offset)
+        if not all(math.isfinite(value) for value in (x, y, z)):
+            raise ValueError("compact point cloud contains non-finite coordinates")
+        result.append(((x, y, z), (red, green, blue)))
+    return result

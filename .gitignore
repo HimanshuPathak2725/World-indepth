@@ -4,3 +4,11 @@ __pycache__/
 .pytest_cache/
 .cache/
 *.egg-info/
+spatial-reconstruction-lab/private/**
+spatial-reconstruction-lab/assets/input/*
+!spatial-reconstruction-lab/assets/input/README.md
+spatial-reconstruction-lab/output/*
+!spatial-reconstruction-lab/output/README.md
+!spatial-reconstruction-lab/output/.gitkeep
+*.npz
+*.wipcld

@@ -14,6 +14,10 @@ Updated: 2026-11-15
 - Downloaded and provenance-recorded the public Atlas documentation workshop image.
 - Ran Depth Anything V2 Small CPU inference and generated the depth, visualization, camera, metrics, JSON cloud, and PLY artifacts.
 - Validated the interactive Three.js viewer in local Playwright Chromium after adding an import map for `OrbitControls`.
+- Created the `feat/view-budget-challenge` branch with public-data safety,
+  compact point-cloud delivery, a private multi-view dataset contract, a
+  tested optional MapAnything adapter, a static landing page, and a GitHub
+  Pages workflow.
 
 ## Evidence
 
@@ -37,6 +41,12 @@ Updated: 2026-11-15
 - Generated artifact integrity check: passed; depth shape, visualization dimensions, PLY header/count, JSON point count, finite depth, and RGB/XYZ field shapes verified.
 - `cd ../spatial-reconstruction-lab && python3 -m http.server 8765`: served viewer successfully.
 - Playwright Chromium viewer load: passed; status reported 921,600 points, one canvas, two controls; screenshot saved at `/tmp/spatial-reconstruction-viewer.png`.
+- The prior Atlas-derived image, generated outputs, and validation screenshot
+  were removed from the public payload because redistribution was unverified;
+  provenance remains in `research/provenance/`.
+- MapAnything upstream README and Apache checkpoint metadata were inspected.
+  The adapter is implemented and mocked-output-tested; no checkpoint download or
+  real inference was performed because this host has no GPU.
 
 ## Blockers and limitations
 
@@ -47,6 +57,8 @@ Updated: 2026-11-15
 - Depth is relative/inverse-like and normalized to arbitrary pseudo-depth units; metric scale and geometric accuracy are unknown.
 - The viewer is a single-view 2.5D visualization, not a complete world reconstruction; holes, disocclusion, back surfaces, and depth errors remain.
 - The first `pytest` attempt failed because `pytest` is not installed in the isolated venv; the existing `unittest` suite passed instead. No dependency was added.
+- No real private multi-view scene, held-out split, camera registration, or
+  PSNR/SSIM/LPIPS evaluation exists yet.
 - `rea doctor` reports Hopper, Ghidra, IDA, JADX, and Kuna unavailable; none is needed for the browser investigation.
 
 ## Exact next action
@@ -55,3 +67,7 @@ Use the generated local artifacts and viewer for qualitative inspection, and com
 their documented representation with Atlas's public posed-RGBD contract. An
 authorized Viewfinder experiment remains unavailable without legitimate access;
 do not bypass sign-in or make paid generation requests.
+
+For the next milestone, capture one licensed static indoor scene with at least
+12 overlapping photographs: 8 possible input views and 4 held-out views. Keep
+the photographs in the ignored `private/scenes/` tree.

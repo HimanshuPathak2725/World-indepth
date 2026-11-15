@@ -69,3 +69,29 @@ The viewer supports orbit, zoom, camera translation through OrbitControls, reset
 point-size adjustment, source-image display, and depth visualization. It
 visualizes a single-view 2.5D cloud; disocclusions, back surfaces, and depth
 errors remain limitations rather than reconstructed geometry.
+
+## A4 — public-data safety and compact delivery
+
+Status: implemented on `feat/view-budget-challenge`; no public demo scene.
+
+The Atlas workshop image and all image-derived point-cloud/depth binaries were
+removed from the public payload because redistribution permission was not
+verified. Its source URL, checksum, dimensions, description, and unknown
+visual type remain in `research/provenance/atlas-workshop-source-metadata.json`.
+The baseline code remains reproducible with an explicitly licensed local image.
+
+The former JSON and ASCII PLY delivery is replaced by the `WIPCLD01` compact
+format: a little-endian header and count followed by float32 XYZ plus uint8 RGB.
+The viewer loads this format from a local file and does not upload it.
+
+## A5 — View Budget Challenge preparation
+
+Status: contract and adapter implemented; no scene or real multi-view run.
+
+The private manifest validator supports deterministic 1/2/3/5/8 input budgets,
+hash and dimension checks, duplicate detection, and held-out leakage rejection.
+The optional MapAnything adapter targets the Apache checkpoint
+`facebook/map-anything-apache` at revision
+`00f9c245bbcb60522d1ed7f9e9d88462c6e3f38a`. Its documented outputs are
+validated in mocked tests, but this 2-CPU/no-GPU Codespace did not download the
+checkpoint or execute inference. Held-out novel-view metrics remain unavailable.
