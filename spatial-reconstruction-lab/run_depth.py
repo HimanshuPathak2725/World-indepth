@@ -14,10 +14,23 @@ import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
-from pointcloud import Intrinsics, Pose, reproject, unproject_rgbd, write_compact, write_ply
+from pointcloud import Intrinsics, Pose, reproject, unproject_rgbd, write_compact
 
 
 MODEL_ID = "depth-anything/Depth-Anything-V2-Small-hf"
+DEFAULT_OUTPUT_FILES = (
+    "depth.npy",
+    "depth_visualization.png",
+    "pointcloud.wipcld",
+    "camera.json",
+    "metrics.json",
+)
+
+
+def write_pointcloud_output(output: Path, points: list) -> int:
+    """Write only the compact public point-cloud artifact."""
+
+    return write_compact(str(output / "pointcloud.wipcld"), points)
 
 
 def main() -> None:
@@ -66,13 +79,7 @@ def main() -> None:
     points = unproject_rgbd(rgb.tolist(), pseudo_depth.tolist(), camera, pose)
     if not points or any(not all(math.isfinite(value) for value in xyz) for _, _, xyz, _ in points):
         raise RuntimeError("point cloud contains no valid finite points")
-    point_count = write_ply(str(args.output / "pointcloud.ply"), points)
-    compact_point_count = write_compact(str(args.output / "pointcloud.wipcld"), points)
-    if compact_point_count != point_count:
-        raise RuntimeError("compact and PLY point counts differ")
-    (args.output / "pointcloud.json").write_text(json.dumps({
-        "points": [{"xyz": list(xyz), "color": list(color)} for _, _, xyz, color in points]
-    }) + "\n", encoding="utf-8")
+    point_count = write_pointcloud_output(args.output, points)
     reprojections = reproject([point[2] for point in points], camera, pose)
     reprojection_error = max(
         math.hypot(u - pixel_u, v - pixel_v)

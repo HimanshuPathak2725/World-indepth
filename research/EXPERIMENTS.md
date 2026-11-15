@@ -80,9 +80,11 @@ verified. Its source URL, checksum, dimensions, description, and unknown
 visual type remain in `research/provenance/atlas-workshop-source-metadata.json`.
 The baseline code remains reproducible with an explicitly licensed local image.
 
-The former JSON and ASCII PLY delivery is replaced by the `WIPCLD01` compact
-format: a little-endian header and count followed by float32 XYZ plus uint8 RGB.
-The viewer loads this format from a local file and does not upload it.
+The baseline runner now writes `depth.npy`, `depth_visualization.png`,
+`camera.json`, `metrics.json`, and only the `WIPCLD01` compact point cloud by
+default. It no longer writes redundant JSON or ASCII PLY files. The format is a
+little-endian header and count followed by float32 XYZ plus uint8 RGB. The
+viewer loads this format from a local file and does not upload it.
 
 ## A5 — View Budget Challenge preparation
 

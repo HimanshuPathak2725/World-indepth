@@ -20,7 +20,10 @@ parameters in the Hub metadata inspected on 2026-11-15.
 inside the optional `run` function. It validates finite `(B,H,W,3)` point maps,
 aligned confidence and masks, non-negative confidence, and records the model,
 revision, coordinate convention, input hashes, runtime, and output summary.
-The adapter does not guess missing fields or convert coordinate systems.
+The adapter persists only `pts3d` arrays in `predictions.npz`; confidence,
+masks, poses, intrinsics, and other available outputs are summarized or listed
+as not persisted. It does not guess missing fields or convert coordinate
+systems.
 
 ## Current execution state
 

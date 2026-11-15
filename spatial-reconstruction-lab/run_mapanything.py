@@ -22,6 +22,8 @@ def main() -> None:
     metadata = run([str(root / view["filename"]) for view in selected], args.output, args.device)
     metadata["scene_id"] = manifest["scene_id"]
     metadata["input_view_ids"] = [view["id"] for view in selected]
+    from pathlib import Path
+    Path(args.output, "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     print(json.dumps(metadata, indent=2))
 
 

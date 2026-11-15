@@ -11,6 +11,7 @@ from pointcloud import (
     write_compact,
     write_ply,
 )
+from run_depth import DEFAULT_OUTPUT_FILES, write_pointcloud_output
 
 
 IDENTITY = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
@@ -87,3 +88,17 @@ class PointCloudTests(unittest.TestCase):
             path.write_bytes(b"WIPCLD01" + (2).to_bytes(4, "little") + b"\0" * 15)
             with self.assertRaises(ValueError):
                 read_compact(str(path))
+
+    def test_baseline_output_contract_writes_no_redundant_json_or_ply(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            count = write_pointcloud_output(output, [(0, 0, (1.0, 2.0, 3.0), (4, 5, 6))])
+            self.assertEqual(count, 1)
+            self.assertEqual((output / "pointcloud.wipcld").exists(), True)
+            self.assertEqual((output / "pointcloud.json").exists(), False)
+            self.assertEqual((output / "pointcloud.ply").exists(), False)
+        self.assertNotIn("pointcloud.json", DEFAULT_OUTPUT_FILES)
+        self.assertNotIn("pointcloud.ply", DEFAULT_OUTPUT_FILES)

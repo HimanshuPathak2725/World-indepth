@@ -109,6 +109,10 @@ def run(image_paths: list[str], output: str | Path, device: str = "cuda") -> dic
         ],
         "inference_seconds": elapsed,
         "prediction_summary": summary,
+        "persisted_arrays": ["predictions.npz:view_*_pts3d"],
+        "available_outputs_not_persisted": [
+            key for key in EXPECTED_KEYS if key not in {"pts3d"}
+        ],
         "coordinate_convention": "OpenCV +X right, +Y down, +Z forward; camera-to-world poses",
         "novel_view_metrics": None,
         "novel_view_metrics_note": "Not computed without independently registered held-out cameras and a renderer.",

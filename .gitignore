@@ -12,3 +12,4 @@ spatial-reconstruction-lab/output/*
 !spatial-reconstruction-lab/output/.gitkeep
 *.npz
 *.wipcld
+_site/
