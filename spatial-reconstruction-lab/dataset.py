@@ -86,7 +86,7 @@ def validate_manifest(manifest: dict[str, Any], root: str | Path) -> None:
 
 
 def select_input_views(manifest: dict[str, Any], budget: int) -> list[dict[str, Any]]:
-    """Select the first deterministic capture-order views without held-out leakage."""
+    """Select deterministic, spatially spread, nested views without leakage."""
 
     if budget not in VIEW_BUDGETS:
         raise DatasetError(f"budget must be one of {VIEW_BUDGETS}")
@@ -94,7 +94,15 @@ def select_input_views(manifest: dict[str, Any], budget: int) -> list[dict[str, 
     if budget > len(views):
         raise DatasetError(f"budget {budget} exceeds {len(views)} input views")
     ordered = sorted(views, key=lambda view: (view.get("capture_order", 0), view["id"]))
-    return ordered[:budget]
+    if budget == 1:
+        indices = [0]
+    else:
+        last = len(ordered) - 1
+        indices = [
+            (index * last + (budget - 1) // 2) // (budget - 1)
+            for index in range(budget)
+        ]
+    return [ordered[index] for index in indices]
 
 
 def validate_budget_inputs(manifest: dict[str, Any], selected_ids: list[str], budget: int) -> None:

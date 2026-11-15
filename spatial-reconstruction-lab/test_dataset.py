@@ -43,8 +43,13 @@ class DatasetTests(unittest.TestCase):
             from dataset import validate_manifest
             validate_manifest(manifest, root)
             self.assertEqual([v["id"] for v in select_input_views(manifest, 5)],
-                             [f"view-{i:03d}" for i in range(5)])
-            validate_budget_inputs(manifest, [f"view-{i:03d}" for i in range(5)], 5)
+                             ["view-000", "view-002", "view-004", "view-005", "view-007"])
+            validate_budget_inputs(manifest,
+                                   ["view-000", "view-002", "view-004", "view-005", "view-007"], 5)
+            two = {v["id"] for v in select_input_views(manifest, 2)}
+            three = {v["id"] for v in select_input_views(manifest, 3)}
+            five = {v["id"] for v in select_input_views(manifest, 5)}
+            self.assertTrue(two < three < five)
             with self.assertRaises(DatasetError):
                 validate_budget_inputs(manifest, ["view-008"], 1)
 

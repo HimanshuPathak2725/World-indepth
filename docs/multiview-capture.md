@@ -35,7 +35,10 @@ python validate_dataset.py private/scenes/<scene-id>/manifest.json
 
 The validator rejects missing or unreadable files, duplicate IDs, duplicate
 hashes, dimension mismatches, malformed manifests, and held-out leakage.
-Budgets are deterministic prefixes of capture order: `1, 2, 3, 5, 8`.
+Budgets are deterministic, spatially spread, nested selections from capture
+order: `1, 2, 3, 5, 8`. With eight candidate input views, every larger budget
+contains the views selected by the previous budget while adding views across
+the capture sequence rather than only taking a prefix.
 
 No multi-view scene has been captured or reconstructed yet; this contract does
 not fabricate results.

@@ -17,23 +17,46 @@ import numpy as np
 
 MODEL_ID = "facebook/map-anything-apache"
 MODEL_REVISION = "00f9c245bbcb60522d1ed7f9e9d88462c6e3f38a"
-EXPECTED_KEYS = ("pts3d", "pts3d_cam", "intrinsics", "camera_poses", "conf", "mask")
+SOURCE_REVISION = "3d10cf7a3016fc0f9bb13a071ee66c47b10be0d9"
+OUTPUT_KEYS = (
+    "pts3d",
+    "pts3d_cam",
+    "depth_z",
+    "depth_along_ray",
+    "intrinsics",
+    "camera_poses",
+    "cam_trans",
+    "cam_quats",
+    "conf",
+    "mask",
+)
 
 
 class PredictionError(ValueError):
     """MapAnything returned an incomplete or unsafe prediction."""
 
 
+def _array(value: Any) -> np.ndarray:
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value)
+
+
+def _mask_array(value: Any) -> np.ndarray:
+    mask = _array(value).astype(bool)
+    return mask[..., 0] if mask.ndim == 4 and mask.shape[-1] == 1 else mask
+
+
 def validate_prediction(prediction: dict[str, Any]) -> None:
     missing = {"pts3d", "conf", "mask"} - prediction.keys()
     if missing:
         raise PredictionError(f"prediction missing required keys: {sorted(missing)}")
-    points = np.asarray(prediction["pts3d"])
-    confidence = np.asarray(prediction["conf"])
-    mask = np.asarray(prediction["mask"]).astype(bool)
+    points = _array(prediction["pts3d"])
+    confidence = _array(prediction["conf"])
+    mask = _mask_array(prediction["mask"])
     if points.ndim != 4 or points.shape[-1] != 3:
         raise PredictionError(f"pts3d must have shape (B,H,W,3), got {points.shape}")
-    if confidence.shape[:3] != points.shape[:3] or mask.shape[:3] != points.shape[:3]:
+    if confidence.shape != points.shape[:3] or mask.shape != points.shape[:3]:
         raise PredictionError("confidence and mask must align with pts3d")
     if not np.isfinite(points).all():
         raise PredictionError("pts3d contains non-finite values")
@@ -43,14 +66,37 @@ def validate_prediction(prediction: dict[str, Any]) -> None:
         raise PredictionError("confidence contains negative values")
 
 
+def validate_complete_prediction(prediction: dict[str, Any]) -> None:
+    missing = set(OUTPUT_KEYS) - prediction.keys()
+    if missing:
+        raise PredictionError(f"complete prediction missing keys: {sorted(missing)}")
+    validate_prediction(prediction)
+    points = _array(prediction["pts3d"])
+    expected_shapes = {
+        "pts3d_cam": points.shape,
+        "depth_z": (*points.shape[:3], 1),
+        "depth_along_ray": (*points.shape[:3], 1),
+        "intrinsics": (points.shape[0], 3, 3),
+        "camera_poses": (points.shape[0], 4, 4),
+        "cam_trans": (points.shape[0], 3),
+        "cam_quats": (points.shape[0], 4),
+    }
+    for key, shape in expected_shapes.items():
+        value = _array(prediction[key])
+        if value.shape != shape:
+            raise PredictionError(f"{key} must have shape {shape}, got {value.shape}")
+        if not np.isfinite(value).all():
+            raise PredictionError(f"{key} contains non-finite values")
+
+
 def prediction_summary(predictions: list[dict[str, Any]]) -> dict[str, Any]:
     if not predictions:
         raise PredictionError("model returned no predictions")
     for prediction in predictions:
         validate_prediction(prediction)
-    valid = sum(int(np.asarray(prediction["mask"]).astype(bool).sum()) for prediction in predictions)
+    valid = sum(int(_mask_array(prediction["mask"]).sum()) for prediction in predictions)
     confidence = np.concatenate([
-        np.asarray(prediction["conf"])[np.asarray(prediction["mask"]).astype(bool)]
+        _array(prediction["conf"])[_mask_array(prediction["mask"])]
         for prediction in predictions
     ])
     return {
@@ -64,6 +110,21 @@ def prediction_summary(predictions: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "keys": sorted(set().union(*(prediction.keys() for prediction in predictions))),
     }
+
+
+def save_predictions(predictions: list[dict[str, Any]], output: str | Path) -> list[str]:
+    """Persist every documented output that the model returned, as CPU NumPy arrays."""
+
+    arrays: dict[str, np.ndarray] = {}
+    for view_index, prediction in enumerate(predictions):
+        validate_complete_prediction(prediction)
+        for key in OUTPUT_KEYS:
+            if key in prediction:
+                arrays[f"view_{view_index}_{key}"] = _array(prediction[key])
+    output_path = Path(output)
+    output_path.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(output_path / "predictions.npz", **arrays)
+    return sorted(arrays)
 
 
 def run(image_paths: list[str], output: str | Path, device: str = "cuda") -> dict[str, Any]:
@@ -80,7 +141,7 @@ def run(image_paths: list[str], output: str | Path, device: str = "cuda") -> dic
         ) from error
     if device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA device requested but torch.cuda.is_available() is false")
-    model = MapAnything.from_pretrained(MODEL_ID).to(device)
+    model = MapAnything.from_pretrained(MODEL_ID, revision=MODEL_REVISION).to(device)
     views = load_images(image_paths)
     start = time.perf_counter()
     predictions = model.infer(
@@ -101,6 +162,7 @@ def run(image_paths: list[str], output: str | Path, device: str = "cuda") -> dic
     metadata = {
         "model": MODEL_ID,
         "model_revision": MODEL_REVISION,
+        "source_revision": SOURCE_REVISION,
         "model_license": "Apache-2.0",
         "device": device,
         "input_image_paths": image_paths,
@@ -109,20 +171,11 @@ def run(image_paths: list[str], output: str | Path, device: str = "cuda") -> dic
         ],
         "inference_seconds": elapsed,
         "prediction_summary": summary,
-        "persisted_arrays": ["predictions.npz:view_*_pts3d"],
-        "available_outputs_not_persisted": [
-            key for key in EXPECTED_KEYS if key not in {"pts3d"}
-        ],
+        "persisted_arrays": [],
         "coordinate_convention": "OpenCV +X right, +Y down, +Z forward; camera-to-world poses",
         "novel_view_metrics": None,
         "novel_view_metrics_note": "Not computed without independently registered held-out cameras and a renderer.",
     }
+    metadata["persisted_arrays"] = save_predictions(predictions, output)
     (output_path / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    np.savez_compressed(
-        output_path / "predictions.npz",
-        **{
-            f"view_{index}_pts3d": np.asarray(prediction["pts3d"])
-            for index, prediction in enumerate(predictions)
-        },
-    )
     return metadata

@@ -76,6 +76,8 @@ registered.
 
 ## Optional MapAnything adapter
 
+[Open the reproducible Google Colab experiment](https://colab.research.google.com/github/HimanshuPathak2725/World-indepth/blob/feat/colab-view-budget-notebook/notebooks/01_colab_view_budget.ipynb)
+
 The adapter targets `facebook/map-anything-apache`, model revision
 `00f9c245bbcb60522d1ed7f9e9d88462c6e3f38a`, Apache-2.0 metadata, and the
 upstream MapAnything API. It is intentionally isolated from the baseline:
@@ -93,6 +95,10 @@ not part of this repository.
 This Codespace has 2 CPUs, 7.8 GiB RAM, and no GPU. The checkpoint was not
 downloaded and real MapAnything inference was not run here. The adapter has
 mocked-output validation tests only.
+
+The notebook runs a two-view GPU smoke test first, then exposes the full
+`1, 2, 3, 5, 8` challenge as a separate manual cell. Private photographs and
+generated results remain in the Colab runtime and are never committed.
 
 ## Checks
 
