@@ -1,0 +1,32 @@
+{
+  "model": "depth-anything/Depth-Anything-V2-Small-hf",
+  "model_revision": "5426e4f0f36572d16453bbda7a8389317b1bef99",
+  "device": "cpu",
+  "inference_seconds": 4.50960185699978,
+  "input_dimensions": [
+    1280,
+    720
+  ],
+  "output_dimensions": [
+    1280,
+    720
+  ],
+  "raw_prediction_range": [
+    0.45975932478904724,
+    10.840529441833496
+  ],
+  "normalized_inverse_depth_range": [
+    0.0,
+    1.0
+  ],
+  "pseudo_depth_range": [
+    1.0,
+    5.0
+  ],
+  "invalid_pixel_count": 0,
+  "valid_pixel_count": 921600,
+  "point_count": 921600,
+  "reprojection_max_pixel_error": 1.2710574864626038e-13,
+  "depth_semantics": "relative/inverse-like model output, explicitly normalized and inverted; not metric",
+  "normalization_policy": "finite raw output min-max to [0,1], then pseudo-depth = 1 + (1 - normalized) * 4"
+}

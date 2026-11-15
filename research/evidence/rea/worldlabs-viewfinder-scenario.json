@@ -1,0 +1,9 @@
+{
+  "browser": {"mode":"launch","executable_path":"/home/codespace/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome","headless":true},
+  "start_url": {"url":"https://atlas.worldlabs.ai/workflows/viewfinder"},
+  "environment": {"viewport":{"width":1280,"height":720,"device_scale_factor":1},"locale":"en-US","timezone":"UTC","color_scheme":"light","reduced_motion":"reduce","service_workers":"block"},
+  "actions": [
+    {"step_id":"viewfinder-page","action":"wait_for","locator":{"kind":"css","selector":"body"},"state":"visible","timeout_ms":30000},
+    {"step_id":"settle","action":"wait_for_timeout","duration_ms":2000}
+  ]
+}
